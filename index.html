@@ -203,8 +203,8 @@
       <button class="btn-modal" id="close-board-btn">關閉</button>
     </div>
   </div>
-  
-<!-- 彈窗 4：暫停畫面 (新增) -->
+
+  <!-- 彈窗 4：暫停畫面 -->
   <div class="modal-overlay" id="pause-modal">
     <div class="modal">
       <h2>⏸️ 遊戲暫停中</h2>
@@ -212,7 +212,7 @@
       <button class="btn-modal" id="modal-resume-btn">繼續遊戲 (RESUME)</button>
     </div>
   </div>
-  
+
   <script>
     const GAS_WEB_APP_URL = "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE";
 
@@ -229,6 +229,9 @@
     const authModal = document.getElementById('auth-modal');
     const gameoverModal = document.getElementById('gameover-modal');
     const leaderboardModal = document.getElementById('leaderboard-modal');
+    const pauseModal = document.getElementById('pause-modal');
+    const pauseBtn = document.getElementById('pause-btn');
+    const modalResumeBtn = document.getElementById('modal-resume-btn');
 
     window.onload = () => authModal.classList.add('active');
 
@@ -242,12 +245,10 @@
       startGame();
     };
 
-    // 無限關卡：過關所需目標行數 (10 + 5 * Level)
     function getTargetLines(lvl) {
       return 10 + 5 * lvl;
     }
 
-    // 無限關卡：下降間隔 (以 2 秒為最高極速上限)
     function getSpawnInterval(lvl) {
       const sec = Math.max(2.0, 14.0 - 1.6 * lvl);
       return sec * 1000;
@@ -258,6 +259,9 @@
       linesLeft = getTargetLines(level);
       rowsData = []; isPaused = false; isGameOver = false;
       
+      pauseBtn.innerText = 'PAUSE';
+      pauseModal.classList.remove('active');
+
       updateUI();
       rowContainer.innerHTML = '';
       gameoverModal.classList.remove('active');
@@ -291,16 +295,15 @@
     function spawnRow(autoRender = true) {
       if (rowsData.length >= MAX_ROWS) return;
 
-      // 關卡越高，綠色題型與大數字出現機率越高
       let type = '10to2';
       const greenRatio = level >= 3 ? Math.min(0.7, 0.45 + (level - 2) * 0.05) : 0.45;
       if (Math.random() < greenRatio) type = '2to10';
 
       let targetVal;
       if (level >= 4) {
-        targetVal = Math.floor(Math.random() * 206) + 50; // 50~255
+        targetVal = Math.floor(Math.random() * 206) + 50;
       } else {
-        targetVal = Math.floor(Math.random() * 127) + 1;  // 1~127
+        targetVal = Math.floor(Math.random() * 127) + 1;
       }
 
       const rowObj = {
@@ -339,6 +342,7 @@
 
           if (row.type === '10to2') {
             tile.onclick = () => {
+              if (isPaused || isGameOver) return;
               row.bits[i] = row.bits[i] === 0 ? 1 : 0;
               checkRow(row, tile);
             };
@@ -364,7 +368,9 @@
           input.value = row.inputVal;
           input.placeholder = '?';
 
-          input.oninput = (e) => { row.inputVal = e.target.value; };
+          input.oninput = (e) => { 
+            if (!isPaused && !isGameOver) row.inputVal = e.target.value; 
+          };
           input.onkeydown = (e) => {
             if (e.key === 'Enter') checkRow(row);
           };
@@ -377,6 +383,8 @@
     }
 
     function checkRow(row, clickedTile = null) {
+      if (isPaused || isGameOver) return;
+
       let isCorrect = false;
 
       if (row.type === '10to2') {
@@ -427,22 +435,33 @@
       }, 1000);
     }
 
-    document.getElementById('pause-btn').onclick = () => {
+    function togglePause() {
+      if (isGameOver) return;
       isPaused = !isPaused;
-      document.getElementById('pause-btn').innerText = isPaused ? 'RESUME' : 'PAUSE';
-    };
+      if (isPaused) {
+        pauseBtn.innerText = 'RESUME';
+        pauseModal.classList.add('active');
+      } else {
+        pauseBtn.innerText = 'PAUSE';
+        pauseModal.classList.remove('active');
+      }
+    }
+
+    pauseBtn.onclick = () => togglePause();
+    modalResumeBtn.onclick = () => togglePause();
 
     document.getElementById('end-btn').onclick = () => endGame();
 
     function endGame() {
       isGameOver = true;
       clearInterval(spawnTimer);
+      pauseModal.classList.remove('active');
       document.getElementById('final-score').innerText = score;
       document.getElementById('final-level').innerText = level;
       gameoverModal.classList.add('active');
     }
 
-    // 1. 上傳成績
+    // 上傳成績
     document.getElementById('submit-btn').onclick = () => {
       if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL.includes("https://script.google.com/macros/s/AKfycbzoPq775CQrzGfo7si8MDJu1wgXabydqRZhpBd5nKn3-mPFQ3sfgA446W7edauRGf9pJA/exec")) return alert("請先設定 GAS URL！");
       
@@ -473,13 +492,12 @@
       });
     };
 
-    // 2. 觀看排行榜 (採用 JSONP 跨網域技術)
+    // 觀看排行榜 (JSONP)
     document.getElementById('view-board-btn').onclick = () => {
       const tbody = document.getElementById('leaderboard-body');
       tbody.innerHTML = '<tr><td colspan="4">載入排行榜中...</td></tr>';
       leaderboardModal.classList.add('active');
 
-      // 全域 Callback 函式接收 JSONP 回傳
       window.handleLeaderboardData = function(data) {
         if (!data || data.length === 0) {
           tbody.innerHTML = '<tr><td colspan="4">目前尚無成績紀錄</td></tr>';
@@ -495,7 +513,6 @@
         `).join('');
       };
 
-      // 動態注入 Script 標籤避開 CORS 限制
       const oldScript = document.getElementById('jsonp-script');
       if (oldScript) oldScript.remove();
 
