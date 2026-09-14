@@ -480,42 +480,42 @@
       gameoverModal.classList.add('active');
     }
 
-    // 上傳與排行榜機制
-    document.getElementById('submit-btn').onclick = () => {
-      if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL.includes("YOUR_GOOGLE_APPS_SCRIPT")) return alert("請先設定 GAS URL！");
-      
-      const formData = new URLSearchParams();
-      formData.append('className', studentInfo.className);
-      formData.append('seat', studentInfo.seat);
-      formData.append('name', studentInfo.name);
-      formData.append('score', score);
-      formData.append('level', level);
+  // 上傳與排行榜機制
+document.getElementById('submit-btn').onclick = () => {
+  if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL.includes("https://script.google.com/macros/s/AKfycbxo5LssUWtIMHmen9IFBtJ7Qrpc_EZGDLNfR9OQ7BYdLU7iWx8p8u0xNBubKb3CL9fjYQ/exec")) {
+    return alert("請先設定 GAS URL！");
+  }
+  
+  const statusMsg = document.getElementById('status-msg');
+  statusMsg.style.color = "yellow";
+  statusMsg.innerText = "⏳ 正在上傳成績...";
 
-      fetch(GAS_WEB_APP_URL, { method: 'POST', mode: 'no-cors', body: formData.toString() })
-      .then(() => {
-        document.getElementById('status-msg').style.color = "lightgreen";
-        document.getElementById('status-msg').innerText = "✅ 成績提交成功！";
-      });
-    };
+  // 封裝表單資料
+  const formData = new URLSearchParams();
+  formData.append('className', studentInfo.className);
+  formData.append('seat', studentInfo.seat);
+  formData.append('name', studentInfo.name);
+  formData.append('score', score);
+  formData.append('level', level);
 
-    document.getElementById('view-board-btn').onclick = () => {
-      const tbody = document.getElementById('leaderboard-body');
-      tbody.innerHTML = '<tr><td colspan="4">載入中...</td></tr>';
-      leaderboardModal.classList.add('active');
-
-      fetch(GAS_WEB_APP_URL)
-        .then(res => res.json())
-        .then(data => {
-          tbody.innerHTML = data.map((item, idx) => `
-            <tr>
-              <td>${idx + 1}</td>
-              <td>${item.className}${item.seat} ${item.name}</td>
-              <td>L${item.level}</td>
-              <td><strong>${item.score}</strong></td>
-            </tr>
-          `).join('');
-        });
-    };
+  fetch(GAS_WEB_APP_URL, {
+    method: 'POST',
+    mode: 'no-cors', // 避開跨網域限制
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: formData.toString()
+  })
+  .then(() => {
+    statusMsg.style.color = "lightgreen";
+    statusMsg.innerText = "✅ 成績已成功寫入試算表！";
+  })
+  .catch(err => {
+    statusMsg.style.color = "#ff6b6b";
+    statusMsg.innerText = "❌ 上傳失敗，請檢查網路連線。";
+    console.error(err);
+  });
+};
 
     document.getElementById('close-board-btn').onclick = () => leaderboardModal.classList.remove('active');
     document.getElementById('restart-btn').onclick = () => startGame();
