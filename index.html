@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Cisco Binary Game 高效能流暢版</title>
+  <title>Cisco Binary Game 高效能無限挑戰版</title>
   <style>
     :root {
       --cyan-header: #00a8cc;
@@ -165,6 +165,7 @@
     </div>
   </div>
 
+  <!-- 彈窗 1：登入資訊 -->
   <div class="modal-overlay" id="auth-modal">
     <div class="modal">
       <h2>二進位挑戰賽 - 身份登記</h2>
@@ -175,6 +176,7 @@
     </div>
   </div>
 
+  <!-- 彈窗 2：結算畫面 -->
   <div class="modal-overlay" id="gameover-modal">
     <div class="modal">
       <h2>GAME OVER</h2>
@@ -186,6 +188,7 @@
     </div>
   </div>
 
+  <!-- 彈窗 3：排行榜 -->
   <div class="modal-overlay" id="leaderboard-modal">
     <div class="modal" style="max-width: 450px;">
       <h2>🏆 課堂即時排行榜 (Top 10)</h2>
@@ -201,16 +204,18 @@
     </div>
   </div>
 
+  <!-- 彈窗 4：暫停畫面遮罩 -->
   <div class="modal-overlay" id="pause-modal">
     <div class="modal">
       <h2>⏸️ 遊戲暫停中</h2>
-      <p style="margin: 15px 0; color: #ccc;">遊戲進度與時間已凍結，準備好後請點擊下方按鈕繼續。</p>
+      <p style="margin: 15px 0; color: #ccc;">遊戲進度與時間已完全凍結，準備好後請點擊下方按鈕繼續。</p>
       <button class="btn-modal" id="modal-resume-btn">繼續遊戲 (RESUME)</button>
     </div>
   </div>
 
   <script>
-    const GAS_WEB_APP_URL = "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE";
+    // 已自動填入您的 Google Apps Script Web App URL
+    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxheewDlNgbtwV6rS7OYaaquiviDVvRoPFb3O-l0eFsDMu1JeFkX_QyTcZIlpJOdWFrdg/exec";
 
     const BIT_VALS = [128, 64, 32, 16, 8, 4, 2, 1];
     const MAX_ROWS = 7;
@@ -320,13 +325,12 @@
           tile.className = `bit-tile ${row.bits[i] === 1 ? 'active' : ''}`;
           tile.innerText = row.bits[i];
 
-          // ⚡ 優化關鍵：僅對目前點擊的這一個 DOM 節點進行修飾，避免重繪全域
+          // 局部更新優化：直接變更當前節點，不重繪全盤，大幅提升反應速度
           if (row.type === '10to2') {
-            tile.onclick = (e) => {
+            tile.onclick = () => {
               if (isPaused || isGameOver) return;
               row.bits[i] = row.bits[i] === 0 ? 1 : 0;
               
-              // 即時更換 UI 狀態
               tile.innerText = row.bits[i];
               if (row.bits[i] === 1) tile.classList.add('active');
               else tile.classList.remove('active');
@@ -376,7 +380,6 @@
         if (parseInt(row.inputVal) === row.targetVal) isCorrect = true;
       }
 
-      // 只有在「答對消掉」時，才進行畫面重繪
       if (isCorrect) {
         rowsData = rowsData.filter(r => r.id !== row.id);
         score += 100 * level;
@@ -434,9 +437,8 @@
       gameoverModal.classList.add('active');
     }
 
+    // 上傳成績至 Google 試算表
     document.getElementById('submit-btn').onclick = () => {
-      if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL.includes("https://script.google.com/macros/s/AKfycbziNEFTksgpcg7Q-8dgz4taQKJL0T8G09HDnLgtqBIcMxL5yzuAbb_feqiHBVvbLAnDog/exec")) return alert("請先設定 GAS URL！");
-      
       const statusMsg = document.getElementById('status-msg');
       statusMsg.style.color = "yellow";
       statusMsg.innerText = "⏳ 正在上傳成績...";
@@ -464,6 +466,7 @@
       });
     };
 
+    // 觀看即時排行榜 (JSONP 繞過跨網域限制)
     document.getElementById('view-board-btn').onclick = () => {
       const tbody = document.getElementById('leaderboard-body');
       tbody.innerHTML = '<tr><td colspan="4">載入排行榜中...</td></tr>';
