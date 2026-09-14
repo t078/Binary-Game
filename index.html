@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Cisco Binary Game 經典版</title>
+  <title>Cisco Binary Game 官方規格版</title>
   <style>
     :root {
       --cyan-header: #00a8cc;
@@ -11,15 +11,14 @@
       --navy-dark: #003e58;
       --green-panel: #5cb85c;
       --orange-btn: #f0a500;
-      --orange-border: #e67e22;
-      --green-border: #27ae60;
+      --green-tile: #27ae60;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; user-select: none; }
     body { background-color: #111; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 10px; }
 
     .game-container {
-      display: flex; width: 100%; max-width: 850px; height: 600px;
+      display: flex; width: 100%; max-width: 850px; height: 680px;
       background: var(--navy-bg); border: 3px solid #000; border-radius: 8px; overflow: hidden;
     }
 
@@ -37,37 +36,36 @@
 
     .row-container {
       flex: 1; display: flex; flex-direction: column; justify-content: flex-end;
-      padding-bottom: 5px; background: var(--navy-dark); overflow: hidden; position: relative;
+      padding: 5px 0; background: var(--navy-dark); overflow: hidden; position: relative;
     }
 
-    /* 每一行題目列 (使用 flex 並禁止換行) */
+    /* 每一行題目列 (絕不換行) */
     .game-row {
       display: flex; align-items: center; flex-wrap: nowrap;
-      padding: 4px 12px; margin-top: 4px; gap: 6px; width: 100%;
+      padding: 4px 12px; height: 72px; gap: 6px; width: 100%;
+      transition: transform 0.5s ease-out, opacity 0.3s;
     }
 
-    /* 8個位元的區域 */
-    .bits-wrapper {
-      display: flex; flex: 1; gap: 4px;
-    }
+    /* 8個位元容器 */
+    .bits-wrapper { display: flex; flex: 1; gap: 4px; }
 
-    /* 方塊樣式 */
+    /* 方塊基礎樣式 */
     .bit-tile {
-      flex: 1; height: 42px; display: flex; align-items: center; justify-content: center;
-      font-size: 1.3rem; font-weight: bold; border-radius: 4px; cursor: pointer; transition: 0.1s;
+      flex: 1; height: 48px; display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem; font-weight: bold; border-radius: 4px; transition: 0.1s;
     }
 
-    /* 10轉2 題目 (橘框) */
+    /* 10轉2 題目 (橘色框/按鈕) */
     .row-type-10to2 .bit-tile {
-      background: #003e58; border: 2px solid var(--orange-btn); color: var(--orange-btn);
+      background: #003e58; border: 2px solid var(--orange-btn); color: var(--orange-btn); cursor: pointer;
     }
     .row-type-10to2 .bit-tile.active {
       background: var(--orange-btn); color: #000;
     }
 
-    /* 2轉10 題目 (綠框) */
+    /* 2轉10 題目 (綠色框/鎖定) */
     .row-type-2to10 .bit-tile {
-      background: #003e58; border: 2px solid var(--green-panel); color: var(--green-panel); cursor: default;
+      background: #003e58; border: 2px solid var(--green-tile); color: var(--green-tile); cursor: default;
     }
 
     .equal-sign {
@@ -77,18 +75,36 @@
 
     /* 右側結果輸入/顯示框 */
     .val-box {
-      width: 65px; height: 40px; background: white; border-radius: 6px;
+      width: 65px; height: 44px; background: white; border-radius: 6px;
       font-size: 1.3rem; font-weight: bold; display: flex; align-items: center;
-      justify-content: center; color: #000; flex-shrink: 0;
+      justify-content: center; color: #000; flex-shrink: 0; overflow: hidden;
     }
 
+    /* 10轉2 右側目標值 (白色背景橘字/橘背景) */
+    .target-box { background: #fff; color: #000; border: 2px solid var(--orange-btn); }
+
+    /* 2轉10 右側輸入框 */
     .val-input {
       width: 100%; height: 100%; border: none; text-align: center; font-size: 1.3rem;
       font-weight: bold; outline: none; background: transparent; color: #000;
       user-select: text;
     }
+    .val-input::placeholder { color: #888; }
 
-    .target-orange { background: var(--orange-btn); color: #000; font-size: 1.4rem; font-weight: bold; }
+    /* BOARD CLEAR 特效 */
+    .board-clear-banner {
+      position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%);
+      background: rgba(240, 165, 0, 0.95); color: #000; font-size: 2.2rem; font-weight: 900;
+      padding: 15px 30px; border-radius: 10px; border: 4px solid #fff;
+      box-shadow: 0 0 20px rgba(255,255,255,0.8); pointer-events: none;
+      animation: popup 0.5s ease-out forwards; z-index: 10;
+    }
+
+    @keyframes popup {
+      0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+      50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+      100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    }
 
     /* 右側控制面板 */
     .side-panel {
@@ -114,7 +130,7 @@
     /* Modal 彈窗 */
     .modal-overlay {
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0, 0, 0, 0.8); display: flex; align-items: center; justify-content: center;
+      background: rgba(0, 0, 0, 0.85); display: flex; align-items: center; justify-content: center;
       z-index: 100; opacity: 0; pointer-events: none; transition: 0.3s;
     }
     .modal-overlay.active { opacity: 1; pointer-events: auto; }
@@ -143,7 +159,7 @@
       </div>
 
       <div class="row-container" id="row-container">
-        <!-- 題目列由 JS 動態生成 -->
+        <!-- 動態生成題目列 -->
       </div>
 
       <div class="bit-headers" style="border-top: 2px solid #000; border-bottom: none;">
@@ -188,7 +204,7 @@
   <!-- 彈窗 2：結算畫面 -->
   <div class="modal-overlay" id="gameover-modal">
     <div class="modal">
-      <h2>遊戲結束！</h2>
+      <h2 id="gameover-title">GAME OVER</h2>
       <p style="margin: 10px 0;">得分: <strong id="final-score">0</strong> | 最高關卡: <strong id="final-level">1</strong></p>
       <button class="btn-modal" id="submit-btn">上傳成績至 Google 試算表</button>
       <button class="btn-modal" id="view-board-btn" style="background:var(--cyan-header);">🏆 查看即時排行榜</button>
@@ -217,6 +233,8 @@
     const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxPQfus6Wo0Wi5JDRzkQf-ThjmM8IFU-_q_24gOqKH3zRFOmZJimhPjzgniHEwwWoZYvw/exec";
 
     const BIT_VALS = [128, 64, 32, 16, 8, 4, 2, 1];
+    const MAX_ROWS = 7; // 規格：最大 7 行
+
     let score = 0, level = 1, linesLeft = 15;
     let rowsData = [];
     let isPaused = false, isGameOver = false;
@@ -240,36 +258,71 @@
       startGame();
     };
 
+    function getTargetLines(lvl) {
+      // 公式：10 + 5 * Level
+      return 10 + 5 * lvl;
+    }
+
+    function getSpawnInterval(lvl) {
+      // 公式：14.0 - 1.6 * Level (秒)
+      const sec = Math.max(6.0, 14.0 - 1.6 * lvl);
+      return sec * 1000;
+    }
+
     function startGame() {
-      score = 0; level = 1; linesLeft = 15;
+      score = 0; level = 1;
+      linesLeft = getTargetLines(level);
       rowsData = []; isPaused = false; isGameOver = false;
+      
+      updateUI();
+      rowContainer.innerHTML = '';
+      gameoverModal.classList.remove('active');
+
+      // 規格：Level 1 初始開局 4 行，其他關卡開局 3 行
+      const initRows = (level === 1) ? 4 : 3;
+      for (let i = 0; i < initRows; i++) {
+        spawnRow(false);
+      }
+      renderRows();
+      resetInterval();
+    }
+
+    function updateUI() {
       document.getElementById('score-val').innerText = score;
       document.getElementById('level-val').innerText = level;
       document.getElementById('lines-val').innerText = linesLeft;
-      rowContainer.innerHTML = '';
-      
-      gameoverModal.classList.remove('active');
-      spawnRow();
-      resetInterval();
     }
 
     function resetInterval() {
       clearInterval(spawnTimer);
-      const speed = Math.max(2500, 6500 - level * 500);
+      const interval = getSpawnInterval(level);
       spawnTimer = setInterval(() => {
-        if (!isPaused && !isGameOver) spawnRow();
-      }, speed);
+        if (!isPaused && !isGameOver) {
+          if (rowsData.length >= MAX_ROWS) {
+            endGame(); // 滿 7 行無法再降下新行時 Game Over
+          } else {
+            spawnRow(true);
+          }
+        }
+      }, interval);
     }
 
-    function spawnRow() {
-      if (rowsData.length >= 8) {
-        endGame();
-        return;
+    function spawnRow(autoRender = true) {
+      if (rowsData.length >= MAX_ROWS) return;
+
+      // 依關卡調整題型比例（Level 3+ 綠色 2to10 比例拉高）
+      let type = '10to2';
+      const greenRatio = level >= 3 ? 0.65 : 0.45;
+      if (Math.random() < greenRatio) type = '2to10';
+
+      // 難度控制：Level 4+ 出現大數值 (150~255)
+      let targetVal;
+      if (level >= 4) {
+        targetVal = Math.floor(Math.random() * 206) + 50; // 50~255
+      } else {
+        targetVal = Math.floor(Math.random() * 127) + 1;  // 1~127
       }
 
-      const type = Math.random() > 0.5 ? '10to2' : '2to10';
-      const targetVal = Math.floor(Math.random() * 255) + 1;
-      
       const rowObj = {
         id: Date.now() + Math.random(),
         type: type,
@@ -278,8 +331,8 @@
         inputVal: ''
       };
 
-      rowsData.unshift(rowObj);
-      renderRows();
+      rowsData.unshift(rowObj); // 由頂部降落，新行置於頂部
+      if (autoRender) renderRows();
     }
 
     function valToBits(val) {
@@ -295,21 +348,22 @@
       rowsData.forEach(row => {
         const rowDiv = document.createElement('div');
         rowDiv.className = `game-row row-type-${row.type}`;
+        rowDiv.dataset.id = row.id;
 
         // 位元包裝容器
         const bitsWrapper = document.createElement('div');
         bitsWrapper.className = 'bits-wrapper';
 
-        // 8 Bits 區塊
         for (let i = 0; i < 8; i++) {
           const tile = document.createElement('div');
           tile.className = `bit-tile ${row.bits[i] === 1 ? 'active' : ''}`;
           tile.innerText = row.bits[i];
 
+          // 10轉2 可點擊切換
           if (row.type === '10to2') {
             tile.onclick = () => {
               row.bits[i] = row.bits[i] === 0 ? 1 : 0;
-              checkRow(row);
+              checkRow(row, tile);
             };
           }
           bitsWrapper.appendChild(tile);
@@ -322,10 +376,10 @@
         eq.innerText = '=';
         rowDiv.appendChild(eq);
 
-        // 右側數值框
+        // 右側數字 / 輸入框
         const valContainer = document.createElement('div');
         if (row.type === '10to2') {
-          valContainer.className = 'val-box target-orange';
+          valContainer.className = 'val-box target-box';
           valContainer.innerText = row.targetVal;
         } else {
           valContainer.className = 'val-box';
@@ -334,11 +388,11 @@
           input.type = 'number';
           input.value = row.inputVal;
           input.placeholder = '?';
-          
-          // 改變狀態但不出發消除
+
+          // 只紀錄文字，絕不自動刷新 DOM
           input.oninput = (e) => { row.inputVal = e.target.value; };
 
-          // 按下 Enter 鍵時才送出回答
+          // 按下 Enter 送出答案
           input.onkeydown = (e) => {
             if (e.key === 'Enter') {
               checkRow(row);
@@ -352,7 +406,7 @@
       });
     }
 
-    function checkRow(row) {
+    function checkRow(row, clickedTile = null) {
       let isCorrect = false;
 
       if (row.type === '10to2') {
@@ -363,28 +417,52 @@
       }
 
       if (isCorrect) {
-        // 答對消除該行
+        // 答對消除
         rowsData = rowsData.filter(r => r.id !== row.id);
         score += 100 * level;
         linesLeft--;
-        
+
+        // 檢查盤面清空獎勵 (BOARD CLEAR!)
+        if (rowsData.length === 0) {
+          triggerBoardClear();
+        }
+
+        // 升關檢查
         if (linesLeft <= 0) {
           level++;
-          linesLeft = 15;
+          linesLeft = getTargetLines(level);
           resetInterval();
         }
 
-        document.getElementById('score-val').innerText = score;
-        document.getElementById('level-val').innerText = level;
-        document.getElementById('lines-val').innerText = linesLeft;
-
+        updateUI();
         renderRows();
       } else {
-        // 若點擊點選型 10to2，則刷新畫面更新 active 顏色；輸入型若錯則不重新 render DOM 以避免跳離
-        if (row.type === '10to2') {
-          renderRows();
+        // 10轉2 時僅更新該 Tile 樣式，避免全頁重新渲染造成流暢度下降
+        if (row.type === '10to2' && clickedTile) {
+          const currentSum = row.bits.reduce((sum, b, i) => sum + b * BIT_VALS[i], 0);
+          const bitIdx = Array.from(clickedTile.parentNode.children).indexOf(clickedTile);
+          if (row.bits[bitIdx] === 1) {
+            clickedTile.classList.add('active');
+          } else {
+            clickedTile.classList.remove('active');
+          }
         }
       }
+    }
+
+    function triggerBoardClear() {
+      score += 500; // 清盤額外加 500 分
+      const banner = document.createElement('div');
+      banner.className = 'board-clear-banner';
+      banner.innerText = 'BOARD CLEAR! +500';
+      rowContainer.appendChild(banner);
+      
+      setTimeout(() => {
+        banner.remove();
+        // 規格：自動補滿 3 行
+        for (let i = 0; i < 3; i++) spawnRow(false);
+        renderRows();
+      }, 1000);
     }
 
     document.getElementById('pause-btn').onclick = () => {
